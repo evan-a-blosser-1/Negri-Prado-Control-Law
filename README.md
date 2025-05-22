@@ -5,13 +5,15 @@ For application to Mass Concentration (MASCON) models for asteroids, and mission
 
 # Controlling an Escape Trajectory:
 
-This is an example of an otherwise esccape trajectory being stabilized. This ulilized a total of $\Delta V \approx 8.15897~m/s$ to stabalize the controlled trajectory for a total of 10 days:
+This is an example of an otherwise escape trajectory being stabilized. This utilized a total of $\Delta V \approx 8.15897~m/s$ to stabilize the controlled trajectory for a total of 10 days:
+
 ![...](Databank/Compare.png)
 ![...](Databank/10day.png)
 
 
 # Configuration for a full asteroid scan:
-This configuration utilized a total of $\Delta V \approx 7.55313~m/s$ over the course of 4 days, and lead to a trajectory that covered the asteroids surface. This can be utilized to create a detailed scan over an asteroid in a relativly short time span. 
+This configuration utilized a total of $\Delta V \approx 7.55313~m/s$ over the course of 4 days, and lead to a trajectory that covered the asteroids surface. This can be utilized to create a detailed scan over an asteroid in a relatively short time span:
+
 ![...](Databank/angle_4day.png)
 
 
