@@ -1,7 +1,6 @@
 # Negri-Prado-Control-Law
 
-### Project Report 
-![Detailed Report](Control_Law_Report.pdf)
+[Detailed Report](Control_Law_Report.pdf)
 
 
 ### Running Simualtions 
