@@ -1,10 +1,17 @@
 # Negri-Prado-Control-Law
 
+### Project Report 
 ![Detailed Report](Control_Law_Report.pdf)
 
 
+### Running Simualtions 
+The main codes to run are
 
-All `Main_...py` & `Negri_Prado_CTRL.py` run simulations utilizing the control law developed by Rodolfo Batista Negri and Antônio F. B. A. Prado.
+1) `Main_Simpy`
+2) `Main_Sim_No_Compare.py` 
+3) `Negri_Prado_CTRL.py` 
+
+each of which are simulations utilizing the control law developed by Rodolfo Batista Negri and Antônio F. B. A. Prado.
 
 
 
