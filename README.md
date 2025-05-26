@@ -9,6 +9,7 @@ This is an example of an otherwise escape trajectory being stabilized. This util
 
 ![...](Databank/Compare.png)
 ![...](Databank/10day.png)
+![10day_data](https://github.com/user-attachments/assets/fda9f934-0d84-496b-bfc7-2e024b22deb5)
 
 
 # Configuration for a full asteroid scan:
