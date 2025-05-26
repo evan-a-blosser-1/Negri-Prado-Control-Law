@@ -16,6 +16,7 @@ This is an example of an otherwise escape trajectory being stabilized. This util
 This configuration utilized a total of $\Delta V \approx 7.55313~m/s$ over the course of 4 days, and lead to a trajectory that covered the asteroids surface. This can be utilized to create a detailed scan over an asteroid in a relatively short time span:
 
 ![...](Databank/angle_4day.png)
+![data_4day](https://github.com/user-attachments/assets/29c47ca0-205b-456b-8af0-9dd21af3e1ff)
 
 
 
