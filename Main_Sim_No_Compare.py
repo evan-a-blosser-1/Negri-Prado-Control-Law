@@ -54,7 +54,7 @@ if not isExist:
 y = 3.0
 ########  0.13395027e-6
 # Hamiltonian Energy (km^2/s^2)
-Ham = 3.0e-6
+Ham = 2.0e-6
 ###################
 ###################
 # Period of asteroid rotation
@@ -64,7 +64,7 @@ T = 2 * np.pi * np.sqrt(y**3/mu)
 dt_min = T/T
 ##################
 # freezing at 0.185763888888 days 
-days       = 0.5
+days       = 10.0
 Start_Time = 0.0
 End_Time   = days*const.day
 # sN =  dt/step
@@ -93,7 +93,7 @@ argP = np.radians(0)
 #  to the sliding surface.
 ##########################
 # Radial
-LambR = 0.53
+LambR = 3.53
 # Normal 
 LambN = 0.53
 #################
@@ -102,12 +102,12 @@ LambN = 0.53
 #   Setting this too high will result in
 #    a large correction and instability
 #
-k_11_p = 1e-11
+k_11_p = 1e-9
 k_22_p = 1e-15
-k_33_p = 1e-13
+k_33_p = 1e-9
 # size of the boundary about the sliding surface
 # used for creating the Phi matrix from the K matrix
-n_phi = 10.0
+n_phi = 0.05
 ###########
 # Orbit eccentricity
 # e = 0.005 approx to zero
@@ -292,12 +292,14 @@ def v_calc(Ham,omega,mu_I,CM,yp):
         U += mu_I[it]/r
     #########################
     psu = U[0]
-    cori = (omega**2)*(x**2 + y**2)
+    cori = (omega**2)*( yp**2)
     print(f"|   Ham:      {Ham} (km^2/s^2) ")
     print(f"|   Psuedo:   {psu} (km^2/s^2) ")
     print(f"|   Coriolis: {cori} (km^2/s^2) ")
     arg =  -2*Ham + cori + 2*psu
-    if arg > 0:
+    if arg < 0:
+        V = np.nan
+    else: 
         V = np.sqrt(arg)
     return V
 ############################################
@@ -378,6 +380,11 @@ Escape.terminal = True
 ########################################### Main
 ### Solve Hamiltonian for initial velocity
 x_dot = v_calc(Ham,omega,mu_I,CM,y)
+if np.isnan(x_dot):
+    print(f"| Initial Condition Error")
+    print(f"|   Hamiltonian: {Ham} too low for y0: {y} km")
+    print(f"|   Increase Hamiltonian or increase y0")
+    sys.exit()
 print(f"|  y: {y} x_dot: {x_dot}")
 #
 # Define initial conditions for this iteration

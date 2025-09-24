@@ -24,7 +24,7 @@ asteroid = '1950DA_Prograde'
 Spin_Rate = 2.1216
 omega = ((2*np.pi)/Spin_Rate) *(1/3600)
 Gamma =  target.gamma
-Esc_Lim = 72.32565 # km 
+Esc_Lim = 540 # km 
 ###########################################################
 ################################################ Load files
 OBJ_F = asteroid + '.obj'
@@ -46,12 +46,16 @@ if not isExist:
     os.mkdir(Data_PATH)
     print(f"| Data Stored in: {Data_PATH} ")
 #######################################
+# Animation and Comparison Settings
+# on/off (1/0) 
+animate = 0
+compare_No_ctrl = 0 
 #######################################.
 # Initial Position (km)
 y = 3.0
 ########  0.13395027e-6
 # Hamiltonian Energy (km^2/s^2)
-Ham = 3.0e-6
+Ham = 2.0e-6
 ###################
 ###################
 # Period of asteroid rotation
@@ -61,7 +65,7 @@ T = 2 * np.pi * np.sqrt(y**3/mu)
 dt_min = T/T
 ##################
 # freezing at 0.185763888888 days 
-days       = 0.5
+days       = 1.5
 Start_Time = 0.0
 End_Time   = days*const.day
 # sN =  dt/step
@@ -74,10 +78,7 @@ Time = np.linspace(start=Start_Time,
 #################################################################
 ##################### Begin Negri Prado Law #####################
 #################################################################
-# Control Law switch (I/O) design of on/off
 #
-# Set to on as Negri Prado is first sim
-CTRL_F = 1
 # Orbital elements (Inclination, 
 #           Longitude of the Ascending Node, Argument of Perigee)
 # ALl orbital elements set to zero
@@ -88,20 +89,20 @@ argP = np.radians(0)
 ####################################### Controller Design 
 # Parameters design to determine the asymptotic convergence
 #  to the sliding surface.
-LambR = 0.02
-LambN = 0.02
+LambR = 0.53
+LambN = 1.53
 #################
 # set K > D_RTN
 # This is a very sensitive parameter
 #   Setting this too high will result in
 #    a large correction and instability
 #
-k_11_p = 1e-11
-k_22_p = 1e-11
-k_33_p = 1e-11
+k_11_p = 1e-9
+k_22_p = 1e-15
+k_33_p = 1e-9
 # size of the boundary about the sliding surface
 # used for creating the Phi matrix from the K matrix
-n_phi = 1.0
+n_phi = 0.05
 ###########
 # Orbit eccentricity
 # e = 0.05 approx to zero
@@ -110,34 +111,27 @@ ecc = 0.005
 #####################################
 # Disturbance matrix, for designing 
 # the K-matrix
-D = np.array([1e-14, 1e-14, 1e-17])
+D = np.array([1e-14, 1e-14, 1e-14])
 ######################################
 Initialize = f"""
 {"-"*42}
 |   Negri Prado Control Law
 {"-"*42}
-| Set to {CTRL_F} (1 = ON, 0 = OFF)
-|
 {"-"*42}
 |   Asteroid:    {asteroid}
 |   tetra count: {Terta_Count}
-|   mu:           {mu:.5e} km^3/s^2
+|   mu:          {mu:.5e} km^3/s^2
 |   Omega:       {omega}  rad/s
 |
 |   Asteroid Rotational 
 |    Period:     {T} s
-{"-"*42}
-|   Rudimentary Controller
 {'-'*42}
 | ---------- Integration Settings ----------
 {'-'*42}
-|   Start Time:    {Start_Time} sec
-|   End Time:      {End_Time} sec
-|   Integration:   {dN} steps
-{'-'*42}
-|   Integrating every: {dt_min} sec.
-|   Total Time: {End_Time} sec.
-|   Days: {days}
+|   Start Time: {Start_Time} sec
+|   End Time:   {End_Time} sec
+|   dt:         {dt_min} sec.
+|   Days:       {days}
 {"-"*42}
 """
 print(Initialize)
@@ -290,12 +284,14 @@ def v_calc(Ham,omega,mu_I,CM,yp):
         U += mu_I[it]/r
     #########################
     psu = U[0]
-    cori = (omega**2)*(x**2 + y**2)
+    cori = (omega**2)*(x**2 + yp**2)
     print(f"|   Ham:      {Ham} (km^2/s^2) ")
     print(f"|   Psuedo:   {psu} (km^2/s^2) ")
     print(f"|   Coriolis: {cori} (km^2/s^2) ")
     arg =  -2*Ham + cori + 2*psu
-    if arg > 0:
+    if arg < 0:
+        V = np.nan
+    else: 
         V = np.sqrt(arg)
     return V
 ############################################
@@ -376,6 +372,11 @@ Escape.terminal = True
 ########################################### Main
 ### Solve Hamiltonian for initial velocity
 x_dot = v_calc(Ham,omega,mu_I,CM,y)
+if np.isnan(x_dot):
+    print(f"| Initial Condition Error")
+    print(f"|   Hamiltonian: {Ham} too low for y0: {y} km")
+    print(f"|   Increase Hamiltonian or increase y0")
+    sys.exit()
 print(f"|  y: {y} x_dot: {x_dot}")
 #
 # Define initial conditions for this iteration
@@ -532,26 +533,30 @@ CTRL_EXTf = time.time()
 #############################################
 ###############################  No Controller
 # # Control Law switch (I/O) design of on/off
-CTRL_F = 0
-CTRL_Non = 1
-
-print("\n")
-print(f"| Control Law: None")
-Non_EXTi = time.time()
-sol_ESC = solve_ivp(
-        fun=EOM_MASCON,
-        t_span=[Time[0], Time[-1]],
-        y0=a0,
-        events=[Collision,Escape],
-        method='DOP853',
-        first_step=dt_min,
-        rtol=1e-10,
-        atol=1e-12,
-        t_eval=Time,
-)
-state_ESC = sol_ESC.y
-t_ESC = sol_ESC.t
-Non_EXTf = time.time()
+if compare_No_ctrl == 1: 
+    CTRL_F = 0
+    CTRL_Non = 1
+    print("\n")
+    print(f"| Control Law: None")
+    Non_EXTi = time.time()
+    sol_ESC = solve_ivp(
+            fun=EOM_MASCON,
+            t_span=[Time[0], Time[-1]],
+            y0=a0,
+            events=[Collision,Escape],
+            method='DOP853',
+            first_step=dt_min,
+            rtol=1e-10,
+            atol=1e-12,
+            t_eval=Time,
+    )
+    state_ESC = sol_ESC.y
+    t_ESC = sol_ESC.t
+    Non_EXTf = time.time()
+    # extract solution for no control 
+    X_ESC = state_ESC[0,:]
+    Y_ESC = state_ESC[1,:]
+    Z_ESC = state_ESC[2,:]
 #####################
 #####################################
 # unpack the acceleration corrections
@@ -580,6 +585,9 @@ elif t[-1] > const.day:
     Time_Tag = "day"
     print(f"| Execution Time: {t[-1]} days")
 #################################
+if compare_No_ctrl == 0:
+    Non_EXTi = 0
+    Non_EXTf = Non_EXTi
 Sim_Out = f"""
 | Controlled Sim execution time: 
 |   {CTRL_EXTf - CTRL_EXTi:.2f} sec
@@ -598,16 +606,13 @@ print(Sim_Out)
 ###########################
 ###########################
 # Plot State and Control Input
-OBJ_Data = np.loadtxt(OBJ_F, delimiter=' ', dtype=str)
-# Extract vertex and face data
-vertices = np.array([line[1:].astype(float) for line in OBJ_Data if line[0] == 'v'])
-faces = np.array([line[1:].astype(int) for line in OBJ_Data if line[0] == 'f'])
-# Scale vertices
-vertices = vertices * Gamma
-# Set faces to start at index 0 instead of 1
-faces = faces - 1
+# Load the OBJ file
+mesh = trimesh.load_mesh(OBJ_F)
+mesh = mesh.apply_scale(Gamma)
+v = mesh.vertices
+f = mesh.faces 
 # Create mesh
-mesh = Poly3DCollection([vertices[ii] for ii in faces], 
+mesh = Poly3DCollection([v[ii] for ii in f], 
                         edgecolor='black',
                         facecolors="white",
                         linewidth=0.5,
@@ -615,21 +620,23 @@ mesh = Poly3DCollection([vertices[ii] for ii in faces],
 X = state[0,:]
 Y = state[1,:]  
 Z = state[2,:]
-X_ESC = state_ESC[0,:]
-Y_ESC = state_ESC[1,:]
-Z_ESC = state_ESC[2,:]
 #######################################################
+plt.rcParams["figure.autolayout"] = True
+# plt.rcParams['font.family'] = 'Times New Roman'
+# plt.rcParams['font.sans-serif'] = 'Times New Roman'
+plt.rcParams['mathtext.fontset'] = 'cm'
 #######################################################
 # Control Input 
 figure3D = plt.figure()
 ax3D = figure3D.add_subplot(111, projection='3d')
 ax3D.add_collection3d(mesh)
 ax3D.plot(X, Y, Z, label='Trajectory', color='blue')
-ax3D.plot(X_ESC, Y_ESC, Z_ESC, label='Uncontrolled', color='red')
-ax3D.set_title(r'$y_0$:'f'{state[1,0]:.2f}' r'$(km)$'f'  'f'Ham:{Ham:.2e}' r'$(km^2/s^2)$'f'  'f'days:{days}')
-ax3D.set_xlabel('X (km)')
-ax3D.set_ylabel('Y (km)')
-ax3D.set_zlabel('Z (km)')
+if compare_No_ctrl == 1: 
+    ax3D.plot(X_ESC, Y_ESC, Z_ESC, label='Uncontrolled', color='red')
+ax3D.set_title(r'$y_0$:'f'{state[1,0]:.2f}' r'$(km)$'f'  'f'Ham:{Ham:.2e}' r'$(km^2/s^2)$'f'  'f'days:{days}',fontsize=15)
+ax3D.set_xlabel(r'$X$ $(km)$',fontsize=25, labelpad=15)
+ax3D.set_ylabel(r'$Y$ $(km)$',fontsize=25, labelpad=15)
+ax3D.set_zlabel(r'$Z$ $(km)$',fontsize=25, labelpad=15)
 ax3D.set_aspect('equal', 'box') 
 
 #######################################################
@@ -661,23 +668,23 @@ fig, (ax1, ax2,axE) = plt.subplots(3, 1, figsize=(12, 6))
 ax1.plot(V_mag)
 ax1.plot(V_Max, label='Perigee',color='green') 
 ax1.plot(V_Min, label='Apogee', color='r') 
-ax1.set_title('Velocity Magnitude')
-ax1.set_xlabel(f'Time (s)')
-ax1.set_ylabel(r'Velocity $\frac{km}{s}$')
+ax1.set_title('Velocity Magnitude',fontsize=25, weight='bold')
+ax1.set_xlabel(f'Time (s)',fontsize=35)
+ax1.set_ylabel(r'Velocity $(\frac{km}{s})$',fontsize=35)
 ax1.legend()
 ax2.plot(Energy)
 # ax2.plot(H_Max) 
 # ax2.plot(H_Min) 
-ax2.set_title('Hamiltonian')
-ax2.set_xlabel(f'Time (s)')
-ax2.set_ylabel(r'Orbit Energy $\frac{km^2}{s^2}$')
+ax2.set_title('Hamiltonian',fontsize=25, weight='bold')
+ax2.set_xlabel(f'Time (s)',fontsize=35)
+ax2.set_ylabel(r'Orbit Energy $(\frac{km^2}{s^2})$',fontsize=35)
 axE.scatter(Accel_Correct[:, 3], U_Con[:], label=f'Control Input', color='blue', s=5, marker='x')
 axE.scatter(Accel_Correct[:, 3],Accel_Correct[:, 0], label=f'Component R', color='green', s=5, marker='|')
 axE.scatter(Accel_Correct[:, 3],Accel_Correct[:, 1], label=f'Component T', color='purple', s=5, marker='_')
 axE.scatter(Accel_Correct[:, 3],Accel_Correct[:, 2], label=f'Component N', color='red', s=5, marker='o')
-axE.set_ylabel(r'Control Input $\frac{km^2}{s^2}$')
-axE.set_xlabel('Time (s)')
-axE.set_title('Control Input vs. Time')
+axE.set_ylabel(r'Control Input $(\frac{km^2}{s^2})$',fontsize=35)
+axE.set_xlabel('Time (s)',fontsize=35)
+axE.set_title('Control Input vs. Time',fontsize=25, weight='bold')
 axE.legend()
 plt.tight_layout()
 ################## 
@@ -685,67 +692,68 @@ plt.tight_layout()
 # AP.ani_3D_Comp(state[:, 3:], state_ESC[:, 3:],OBJ_F, Gamma, 
 #                    ['Controlled', 'Uncontrolled'],Mesh_color="cyan",F_T=2)
 #
-OBJ_Data = np.loadtxt(OBJ_F, delimiter=' ', dtype=str)
-vertices = np.array([line[1:].astype(float) for line in OBJ_Data if line[0] == 'v'])
-faces = np.array([line[1:].astype(int) for line in OBJ_Data if line[0] == 'f'])
-vertices = vertices * Gamma
-faces = faces - 1
-meshA = Poly3DCollection([vertices[ii] for ii in faces], 
-                        edgecolor='cyan',
-                        facecolors="white",
-                        linewidth=0.5,
-                        alpha=0.0)
+if animate == 1:
+    OBJ_Data = np.loadtxt(OBJ_F, delimiter=' ', dtype=str)
+    vertices = np.array([line[1:].astype(float) for line in OBJ_Data if line[0] == 'v'])
+    faces = np.array([line[1:].astype(int) for line in OBJ_Data if line[0] == 'f'])
+    vertices = vertices * Gamma
+    faces = faces - 1
+    meshA = Poly3DCollection([vertices[ii] for ii in faces], 
+                            edgecolor='cyan',
+                            facecolors="white",
+                            linewidth=0.5,
+                            alpha=0.0)
 
-# Setup figure and axis
-figA = plt.figure(figsize=(10, 8))
-axA = figA.add_subplot(111, projection='3d')
-axA.add_collection3d(meshA)
-line1, = axA.plot([], [], [], 'b-', label='Negri-Prado', markevery=[-1], marker='o', markersize=8)
-line2, = axA.plot([], [], [], 'r--', label='Uncontrolled', markevery=[-1], marker='o', markersize=8)
+    # Setup figure and axis
+    figA = plt.figure(figsize=(10, 8))
+    axA = figA.add_subplot(111, projection='3d')
+    axA.add_collection3d(meshA)
+    line1, = axA.plot([], [], [], 'b-', label='Negri-Prado', markevery=[-1], marker='o', markersize=8)
+    line2, = axA.plot([], [], [], 'r--', label='Uncontrolled', markevery=[-1], marker='o', markersize=8)
 
-# Calculate view bounds
-max_range = np.max([
-    np.max(state[0]) - np.min(state[0]),
-    np.max(state[1]) - np.min(state[1]),
-    np.max(state[2]) - np.min(state[2])
-])
-mid_x = (np.max(state[0]) + np.min(state[0])) * 0.5
-mid_y = (np.max(state[1]) + np.min(state[1])) * 0.5
-mid_z = (np.max(state[2]) + np.min(state[2])) * 0.5
+    # Calculate view bounds
+    max_range = np.max([
+        np.max(state[0]) - np.min(state[0]),
+        np.max(state[1]) - np.min(state[1]),
+        np.max(state[2]) - np.min(state[2])
+    ])
+    mid_x = (np.max(state[0]) + np.min(state[0])) * 0.5
+    mid_y = (np.max(state[1]) + np.min(state[1])) * 0.5
+    mid_z = (np.max(state[2]) + np.min(state[2])) * 0.5
 
-# Set view limits
-padding = max_range * 0.6
-axA.set_xlim(mid_x - padding, mid_x + padding)
-axA.set_ylim(mid_y - padding, mid_y + padding)
-axA.set_zlim(mid_z - padding, mid_z + padding)
+    # Set view limits
+    padding = max_range * 0.6
+    axA.set_xlim(mid_x - padding, mid_x + padding)
+    axA.set_ylim(mid_y - padding, mid_y + padding)
+    axA.set_zlim(mid_z - padding, mid_z + padding)
 
-# Style settings
-axA.set_aspect('equal', 'box')
-axA.grid(False)
-axA.set_axis_off()
-axA.set_facecolor('black')
-figA.patch.set_facecolor('black')
+    # Style settings
+    axA.set_aspect('equal', 'box')
+    axA.grid(False)
+    axA.set_axis_off()
+    axA.set_facecolor('black')
+    figA.patch.set_facecolor('black')
 
-# Animation settings
-frame_skip = 2
-frames = range(0, len(state[0]), frame_skip)
+    # Animation settings
+    frame_skip = 2
+    frames = range(0, len(state[0]), frame_skip)
 
-def update(frame):
-    line1.set_data(state[0][:frame], state[1][:frame])
-    line1.set_3d_properties(state[2][:frame])
-    line1.set_markevery([-1])
-    line2.set_data(state_ESC[0][:frame], state_ESC[1][:frame])
-    line2.set_3d_properties(state_ESC[2][:frame])
-    line2.set_markevery([-1])
-    return line1, line2
+    def update(frame):
+        line1.set_data(state[0][:frame], state[1][:frame])
+        line1.set_3d_properties(state[2][:frame])
+        line1.set_markevery([-1])
+        line2.set_data(state_ESC[0][:frame], state_ESC[1][:frame])
+        line2.set_3d_properties(state_ESC[2][:frame])
+        line2.set_markevery([-1])
+        return line1, line2
 
-anim = animation.FuncAnimation(
-    figA, update, frames=frames,
-    interval=0.1, blit=True,
-    cache_frame_data=False
-)
-    
-plt.legend()
+    anim = animation.FuncAnimation(
+        figA, update, frames=frames,
+        interval=0.1, blit=True,
+        cache_frame_data=False
+    )
+        
+    plt.legend()
 ##################
 # Show All Plots #
 plt.show()
