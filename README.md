@@ -2,7 +2,7 @@
 
 
 
-For application to Mass Concentration (MASCON) models for asteroids, and mission design, the control law developed by Rodolfo Batista Negri and Antônio F. B. A. Prado was utilized to estimate the required $\Delta V$ for stabilizing an escape trajectory. This has a wide range of application in space mission design, and can be adjusted to allow for various configurations. Follow the link for more information: [Detailed Report](Control_Law_Report.pdf)
+For application to Mass Concentration (MASCON) models for asteroids, and mission design, the control law developed by Rodolfo Batista Negri and Antônio F. B. A. Prado was utilized to estimate the required $\Delta V$ for stabilizing an escape trajectory. This has a wide range of application in space mission design, and can be adjusted to allow for various configurations. 
 
 
 # Controlling an Escape Trajectory:
